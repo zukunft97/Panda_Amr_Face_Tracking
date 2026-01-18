@@ -1,0 +1,7 @@
+<launch>
+  <node
+    pkg="panda_amr_tutorial"
+    type="amr_controller"
+    name="amr_controller"
+    output="screen" />
+</launch>

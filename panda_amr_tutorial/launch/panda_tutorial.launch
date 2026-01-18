@@ -1,0 +1,8 @@
+<launch>
+  <node
+    pkg="panda_amr_tutorial"
+    type="panda_tutorial"
+    name="panda_tutorial"
+    output="screen" />
+</launch>
+  

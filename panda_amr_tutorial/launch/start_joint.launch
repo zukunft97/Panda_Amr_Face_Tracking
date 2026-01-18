@@ -1,0 +1,8 @@
+<launch>
+  <node
+    pkg="panda_amr_tutorial"
+    type="start_joint"
+    name="start_joint"
+    output="screen" />
+</launch>
+  

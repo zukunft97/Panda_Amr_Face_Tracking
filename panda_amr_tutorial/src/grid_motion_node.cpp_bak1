@@ -1,0 +1,79 @@
+#include "panda_amr_tutorial/grid_motion_node.h"
+
+GridMotionNode::GridMotionNode(ros::NodeHandle& nh)
+    : arm_("panda_arm"), x_(4), y_(1)
+{
+    // JointArray start_pose = {
+    //     7.322118496522308e-05,
+    //     -0.7853116683289186,
+    //     9.577233898453416e-05,
+    //     -2.356122405050535,
+    //     2.6367573672905566e-05,
+    //     3.1454202351145444,
+    //     0.7853191739090496
+    // };
+
+    // arm_.moveToJointPositions(start_pose);
+    // ros::Duration(1.0).sleep();
+
+    JointArray left_up = {
+        0.7151773952805371, -0.28012871115755844, -0.9871890327634127, -1.0002915439126312, 0.3435776759735543, 2.327328097568847, 0.3042042723277496
+    };
+
+    JointArray right_up = {
+        -0.7170724669537543, -0.2913998397375787, 0.9746626958040412, -1.011591679765544, -0.3230300674792322, 2.334824640695208, 1.2586397617001708
+    };
+
+    JointArray left_down = {
+        0.5374484572266293, -0.9678720193902574, -0.82597529419326, -2.362356550630818, 2.164167581296397, 3.125863091866072, -2.029845733971081
+    };
+
+    JointArray right_down = {
+        -0.5739309416332415, -1.0060642207505883, 1.0899553703694385, -2.6890355192103574, 0.3322800021087604, 3.48258856211961, 1.3292631826070582
+    };
+
+    JointGridGenerator generator(
+    left_up, right_up, left_down, right_down);
+
+    grid_ = generator.generate(10);
+
+    arm_.moveToJointPositions(grid_[x_][y_]);
+
+    sub_ = nh.subscribe("/grid_cmd", 1, &GridMotionNode::commandCallback, this);
+}
+
+void GridMotionNode::commandCallback(
+    const std_msgs::String::ConstPtr& msg)
+{
+    ROS_INFO("1");
+    const std::string& cmd = msg->data;
+
+    if (cmd == "right" || cmd == "rightup" || cmd == "rightdown")
+    {
+        if (x_ < 9) x_++;
+    }
+
+    if (cmd == "left" || cmd == "leftup" || cmd == "leftdown")
+    {
+        if (x_ > 0) x_--;
+    }
+
+    if (cmd == "up" || cmd == "rightup" || cmd == "leftup")
+    {
+        if (y_ < 9) y_++;
+    }
+
+    if (cmd == "down" || cmd == "rightdown" || cmd == "leftdown")
+    {
+        if (y_ > 0) y_--;
+    }
+
+    ROS_INFO("2");
+    ROS_INFO("x=%zu, y=%zu", x_, y_);
+    move();
+}
+
+void GridMotionNode::move()
+{
+    arm_.moveToJointPositions(grid_[x_][y_]);
+}

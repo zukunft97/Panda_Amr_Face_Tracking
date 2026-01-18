@@ -1,0 +1,35 @@
+#include "panda_amr_tutorial/joint_grid_generator.h"
+
+JointGridGenerator::JointGridGenerator(
+  const JointArray& left_up,
+  const JointArray& right_up,
+  const JointArray& left_down,
+  const JointArray& right_down)
+  : lu_(left_up), ru_(right_up),
+    ld_(left_down), rd_(right_down)
+{}
+
+JointGrid JointGridGenerator::generate(size_t N) const
+{
+  JointGrid grid(N, std::vector<JointArray>(N));
+
+  for (size_t x = 0; x < N; ++x)
+  {
+    double tx = static_cast<double>(x) / (N - 1);
+
+    for (size_t y = 0; y < N; ++y)
+    {
+      double ty = static_cast<double>(y) / (N - 1);
+
+      for (size_t j = 0; j < ARM_DOF; ++j)
+      {
+        grid[x][y][j] =
+          (1 - tx) * (1 - ty) * ld_[j] +
+          (tx)     * (1 - ty) * rd_[j] +
+          (1 - tx) * (ty)     * lu_[j] +
+          (tx)     * (ty)     * ru_[j];
+      }
+    }
+  }
+  return grid;
+}

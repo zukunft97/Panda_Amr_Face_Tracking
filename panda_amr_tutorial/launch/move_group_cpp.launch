@@ -1,0 +1,7 @@
+<launch>
+  <node
+    pkg="panda_amr_tutorial"
+    type="move_group_cpp"
+    name="move_group_cpp"
+    output="screen" />
+</launch>
