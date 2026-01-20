@@ -1,0 +1,139 @@
+import cv2
+import rospy
+from std_msgs.msg import String
+from typing import List, Tuple
+from yolov5facedetector.face_detector import YoloDetector
+
+
+class FaceResult:
+    def __init__(self, bbox, score, landmarks):
+        self.bbox = bbox
+        self.score = score
+        self.landmarks = landmarks
+
+
+class RosTopicPublish:
+    def __init__(self):
+        self.pub = rospy.Publisher("/face_direction", String, queue_size=10)
+
+    def topicpub(self, data: str):
+        msg = String()
+        msg.data = data
+        self.pub.publish(msg)
+
+
+class FaceDirection:
+    def __init__(self):
+        self.publisher = RosTopicPublish()
+
+    def movedirection(self, frame, fx, fy):
+        frame_x = frame.shape[1] / 20
+        frame_y = frame.shape[0] / 20
+
+        if fx < -frame_x:
+            print("left")
+            self.publisher.topicpub("left")
+        elif fx > frame_x:
+            print("right")
+            self.publisher.topicpub("right")
+
+        if fy < -frame_y:
+            print("down")
+            self.publisher.topicpub("down")
+        elif fy > frame_y:
+            print("up")
+            self.publisher.topicpub("up")
+
+
+class FirstFace:
+    def firstface(self, frame, faces):
+        frame_cx = frame.shape[1] / 2
+        frame_cy = frame.shape[0] / 2
+
+        max_area = 0
+        best_bbox = None
+
+        for face in faces:
+            x1, y1, x2, y2 = face.bbox
+            area = (x2 - x1) * (y2 - y1)
+            if area > max_area:
+                max_area = area
+                best_bbox = (x1, y1, x2, y2)
+
+        if best_bbox is None:
+            return 0, 0
+
+        x1, y1, x2, y2 = best_bbox
+        x = x1 + (x2 - x1) / 2
+        y = y1 + (y2 - y1) / 2
+
+        fx = frame_cx - x
+        fy = frame_cy - y
+
+        return fx, fy
+
+
+class FaceDetector:
+    def __init__(self):
+        self.detector = YoloDetector()
+
+    def detect(self, frame) -> List[FaceResult]:
+        results = self.detector(frame)
+
+        bboxes = results[0][0]
+        scores = results[1][0]
+        landmarks = results[2][0]
+
+        faces = []
+        for bbox, score, lm in zip(bboxes, scores, landmarks):
+            faces.append(
+                FaceResult(
+                    bbox=bbox,
+                    score=float(score[0]),
+                    landmarks=[tuple(p) for p in lm],
+                )
+            )
+        return faces
+
+
+class WebcamFaceApp:
+    def __init__(self, device="/dev/mywebcam"):
+        self.cap = cv2.VideoCapture(device)
+
+        self.firstface = FirstFace()
+        self.facedirection = FaceDirection()
+        self.detector = FaceDetector()
+
+        if not self.cap.isOpened():
+            raise RuntimeError("카메라 열기 실패")
+
+    def draw_faces(self, frame, faces):
+        fx, fy = self.firstface.firstface(frame, faces)
+        self.facedirection.movedirection(frame, fx, fy)
+
+        for face in faces:
+            x1, y1, x2, y2 = face.bbox
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    def run(self):
+        print("Webcam face detection started (press 'q' to quit)")
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                break
+
+            faces = self.detector.detect(frame)
+            self.draw_faces(frame, faces)
+
+            cv2.imshow("Face Detection", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    rospy.init_node("face_direction_node", anonymous=True)
+    cam = WebcamFaceApp("/dev/mywebcam")
+    cam.run()
