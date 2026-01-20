@@ -76,5 +76,15 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(eef_relative_move src/eef_relative_move.cpp)
+add_executable(eef_relative_move 
+  src/eef_relative_move.cpp
+  src/panda_arm_controller.cpp
+  )
 target_link_libraries(eef_relative_move ${catkin_LIBRARIES})
+
+
+add_executable(a 
+  src/a.cpp
+  src/panda_arm_controller.cpp
+)
+target_link_libraries(a ${catkin_LIBRARIES})

@@ -1,3 +1,18 @@
+# 라이센스 관련
+
+## Description
+This project implements face tracking for a Panda robot mounted on an AMR using ROS Noetic, MoveIt, and YOLOv5.
+
+## Features
+- Panda arm motion control with MoveIt
+- YOLOv5-based face detection
+- ROS message-based integration
+
+## Acknowledgements
+- MoveIt: https://github.com/moveit/moveit
+- MoveIt Tutorials: https://github.com/moveit/moveit_tutorials
+- YOLOv5: https://github.com/ultralytics/yolov5
+
 # 로봇 팔과 카메라를 통하여 얼굴 추적 하는 시스템 구현
 
 ## 1. moveit의 튜토리얼 코드를 받아서 시작
@@ -30,6 +45,16 @@
       x +4 , y + 1 으로 이동 확인
       
     - 로봇 팔이 정확한 자세 보단 얼굴을 따라서 비슷하게 움직이는 것을 구현 하는게 목표 이므로 이대로 진행
+    
+  ### 2-3 x,y,z 좌표 값을 통한 로봇 팔 제어 테스트2 결과
+  
+    - 현재 위치에서 x+3, y+3 만큼 이동 명령 일때 로봇 팔의 엔드 툴의 위치가 오른쪽으로 대략 4cm 이동 확인
+    
+    - 현재 위치에서 x-3, y+3 만큼 이동 명령 일때 로봇 팔의 엔드 툴의 위치가 아래쪽으로 대략 4cm 이동 확인
+      
+    - 로봇 팔이 움직일땐 위치 이동 명령을 무시하고 멈춰있을 때만 위치 최신화 실시
+    
+    - 시작 위치에서 상화좌우 최대 10번만 이동 하도록 제한
 
 ## 3. 얼굴 추적 시스템 구현
 
@@ -38,3 +63,17 @@
   - 추정된 얼굴의 박스를 이용하여 토픽을 발행 하여 로봇 팔 제어 방향 지시
   
   - 감지된 얼굴이 2개 이상일 경우 박스가 가장 큰게 가까운 사람으로 판단하여 박스가 제일 큰 사람을 기준으로 방향 제어
+  
+## 4. 얼굴 추적 과 로봇 팔 연동
+
+  - 2,3 을 통해서 카메라로 인식한 사람의 얼굴을 로봇 팔이 추적 하도록 설정
+  
+  - 제어 하기 위한 명령어
+  	cd ~/ws 기준
+	python3 src/yolov5_ros/src/face_detect.py
+	roslaunch panda_moveit_config demo.launch
+	roslaunch moveit_tutorials move_group_interface_tutorial.launch
+	roslaunch panda_amr_tutorial eef_relative_move.launch
+
+	
+
