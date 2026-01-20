@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 라이센스 관련
 
 ## Description
@@ -69,7 +70,6 @@ This project implements face tracking for a Panda robot mounted on an AMR using 
   - 2,3 을 통해서 카메라로 인식한 사람의 얼굴을 로봇 팔이 추적 하도록 설정
   
   - 제어 하기 위한 명령어
-<<<<<<< HEAD
 
   	cd ~/ws 기준
 
@@ -81,13 +81,3 @@ This project implements face tracking for a Panda robot mounted on an AMR using 
 
 	roslaunch panda_amr_tutorial eef_relative_move.launch
 
-=======
-  	cd ~/ws 기준
-	python3 src/yolov5_ros/src/face_detect.py
-	roslaunch panda_moveit_config demo.launch
-	roslaunch moveit_tutorials move_group_interface_tutorial.launch
-	roslaunch panda_amr_tutorial eef_relative_move.launch
-
-	
-
->>>>>>> face_detection
