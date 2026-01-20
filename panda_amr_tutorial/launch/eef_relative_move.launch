@@ -1,0 +1,7 @@
+<launch>
+  <node
+    pkg="panda_amr_tutorial"
+    type="eef_relative_move"
+    name="eef_relative_move"
+    output="screen" />
+</launch>

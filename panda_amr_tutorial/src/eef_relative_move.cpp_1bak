@@ -1,0 +1,94 @@
+#include <ros/ros.h>
+
+// MoveIt
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+
+// TF2
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Transform.h>
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "eef_relative_move");
+    ros::NodeHandle nh;
+
+    ros::AsyncSpinner spinner(2);
+    spinner.start();
+
+    /* ================================
+     * MoveIt 기본 설정
+     * ================================ */
+    static const std::string PLANNING_GROUP = "panda_arm";
+    moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
+
+    move_group.setEndEffectorLink("panda_link8");
+    move_group.setPlanningTime(5.0);
+    move_group.setMaxVelocityScalingFactor(0.2);
+    move_group.setMaxAccelerationScalingFactor(0.2);
+
+    ROS_INFO("Planning frame: %s",
+             move_group.getPlanningFrame().c_str());
+    ROS_INFO("End effector link: %s",
+             move_group.getEndEffectorLink().c_str());
+
+    /* ================================
+     * 현재 EE Pose 읽기
+     * ================================ */
+    geometry_msgs::PoseStamped current_pose_stamped =
+        move_group.getCurrentPose();
+
+    geometry_msgs::Pose current_pose = current_pose_stamped.pose;
+
+    ROS_INFO("Current EE position: [%.3f, %.3f, %.3f]",
+             current_pose.position.x,
+             current_pose.position.y,
+             current_pose.position.z);
+
+    /* ================================
+     * EE 기준 상대 이동 설정
+     * ================================ */
+    // EE 좌표계 기준 이동량 (m)
+    double dx = 0.03;   // EE x축 +5cm
+    double dy = 0.03;
+    double dz = 0.0;
+
+    // Pose -> tf2 Transform
+    tf2::Transform tf_current;
+    tf2::fromMsg(current_pose, tf_current);
+
+    // EE frame 기준 이동 벡터
+    tf2::Vector3 delta(dx, dy, dz);
+
+    // 현재 EE 변환에 적용
+    tf2::Vector3 new_origin = tf_current * delta;
+    tf_current.setOrigin(new_origin);
+
+    // 다시 Pose로 변환
+    geometry_msgs::Pose target_pose;
+    tf2::toMsg(tf_current, target_pose);
+
+    /* ================================
+     * MoveIt 명령
+     * ================================ */
+    move_group.setStartStateToCurrentState();
+    move_group.setPoseTarget(target_pose);
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    bool success =
+        (move_group.plan(plan)
+         == moveit::core::MoveItErrorCode::SUCCESS);
+
+    if (success)
+    {
+        ROS_INFO("Plan successful. Executing...");
+        move_group.execute(plan);
+    }
+    else
+    {
+        ROS_ERROR("Planning failed!");
+    }
+
+    ros::shutdown();
+    return 0;
+}
