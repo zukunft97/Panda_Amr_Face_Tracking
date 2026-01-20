@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 라이센스 관련
 
 ## Description
