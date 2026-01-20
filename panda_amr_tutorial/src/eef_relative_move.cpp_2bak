@@ -1,10 +1,8 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
-#include <array>
 
 // MoveIt
 #include <moveit/move_group_interface/move_group_interface.h>
-#include "panda_amr_tutorial/panda_arm_controller.h"
 
 // TF2
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -14,25 +12,8 @@ class EEFRelativeMoveNode
 {
 public:
     EEFRelativeMoveNode(ros::NodeHandle& nh)
-        : move_group_("panda_arm"),
-        grid_x_(0), grid_y_(0)
+        : move_group_("panda_arm")
     {
-        // ================================
-        // 시작 위치로 이동 (Joint Space)
-        // ================================
-        PandaArmController arm("panda_arm");
-        PandaArmController::JointArray start_joints = {
-            7.322118496522308e-05,
-            -0.7853116683289186,
-            9.577233898453416e-05,
-            -2.356122405050535,
-            2.636757367290556e-05,
-            3.1454202351145444,
-            0.7853191739090496
-        };
-        arm.moveToJointPositions(start_joints);
-        ros::Duration(0.5).sleep();
-
         /* ================================
          * MoveIt 설정
          * ================================ */
@@ -60,14 +41,6 @@ private:
     ros::Subscriber dir_sub_;
     moveit::planning_interface::MoveGroupInterface move_group_;
 
-    bool is_moving_ = false;
-    std::string pending_command_;
-
-    // grid 좌표
-    int grid_x_;
-    int grid_y_;
-    const int GRID_LIMIT = 10;
-
     /* ================================
      * 방향 문자열 콜백
      * 4cm씩 이동
@@ -79,39 +52,16 @@ private:
 
         const double step = 0.03;  // 3cm
 
-        if (is_moving_){
-            return;
-        }
-        
-        else{
-            if (dir == "up" && grid_y_ <10){
-                is_moving_ = true;
-                grid_y_++;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(step, -step, 0.0);
-            }
-            else if (dir == "down" && -10 < grid_y_){
-                is_moving_ = true;
-                grid_y_--;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(-step, step, 0.0);
-            }
-            else if (dir == "left" && grid_x_ < 10){
-                is_moving_ = true;
-                grid_x_++;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(-step, -step, 0.0);
-            }
-            else if (dir == "right" && -10 < grid_x_){
-                is_moving_ = true;
-                grid_x_--;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(step, step, 0.0);
-            }
-            else{
-                ROS_WARN("Unknown direction: %s", dir.c_str());
-            }
-        }
+        if (dir == "up")
+            moveRelative(step, -step, 0.0);
+        else if (dir == "down")
+            moveRelative(-step, step, 0.0);
+        else if (dir == "left")
+            moveRelative(-step, -step, 0.0);
+        else if (dir == "right")
+            moveRelative(step, step, 0.0);
+        else
+            ROS_WARN("Unknown direction: %s", dir.c_str());
     }
 
     /* ================================
@@ -133,8 +83,6 @@ private:
         {
             ROS_INFO("Plan successful. Executing...");
             move_group_.execute(plan);
-
-                    is_moving_ = false;
         }
         else
         {
