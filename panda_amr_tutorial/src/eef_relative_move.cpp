@@ -51,7 +51,7 @@ public:
          * ================================ */
         dir_sub_ = nh.subscribe(
             "/face_direction",   // 예시 토픽 이름
-            10,
+            1,
             &EEFRelativeMoveNode::directionCallback,
             this);
     }
