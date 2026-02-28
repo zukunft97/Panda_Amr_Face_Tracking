@@ -15,13 +15,15 @@ class EEFRelativeMoveNode
 public:
     EEFRelativeMoveNode(ros::NodeHandle& nh)
         : move_group_("panda_arm"),
-        grid_x_(0), grid_y_(0)
+          grid_x_(0),
+          grid_y_(0)
     {
-        // ================================
-        // 시작 위치로 이동 (Joint Space)
-        // ================================
+        /* ================================
+         * 시작 위치로 이동
+         * ================================ */
         PandaArmController arm("panda_arm");
-        PandaArmController::JointArray start_joints = {
+
+        start_joints_ = {
             7.322118496522308e-05,
             -0.7853116683289186,
             9.577233898453416e-05,
@@ -30,7 +32,8 @@ public:
             3.1454202351145444,
             0.7853191739090496
         };
-        arm.moveToJointPositions(start_joints);
+
+        arm.moveToJointPositions(start_joints_);
         ros::Duration(0.5).sleep();
 
         /* ================================
@@ -46,76 +49,108 @@ public:
         ROS_INFO("End effector link: %s",
                  move_group_.getEndEffectorLink().c_str());
 
-        /* ================================
-         * Subscriber
-         * ================================ */
         dir_sub_ = nh.subscribe(
-            "/face_direction",   // 예시 토픽 이름
+            "/face_direction",
             1,
             &EEFRelativeMoveNode::directionCallback,
             this);
+
+        last_msg_time_ = ros::Time::now();
+
+        watchdog_timer_ =
+            nh.createTimer(
+                ros::Duration(0.5),
+                &EEFRelativeMoveNode::watchdogCallback,
+                this);
     }
 
 private:
     ros::Subscriber dir_sub_;
+
+    ros::Timer watchdog_timer_;
+
     moveit::planning_interface::MoveGroupInterface move_group_;
 
     bool is_moving_ = false;
-    std::string pending_command_;
 
-    // grid 좌표
+    bool returned_to_home_ = false;
+
+    ros::Time last_msg_time_;
+
+    PandaArmController::JointArray start_joints_;
+
     int grid_x_;
     int grid_y_;
     const int GRID_LIMIT = 10;
 
     /* ================================
-     * 방향 문자열 콜백
-     * 4cm씩 이동
+     * 방향 콜백
      * ================================ */
     void directionCallback(const std_msgs::String::ConstPtr& msg)
     {
+        /******** [ADD] 메시지 수신 시간 갱신 ********/
+        last_msg_time_ = ros::Time::now();
+        returned_to_home_ = false;
+
         const std::string& dir = msg->data;
         ROS_INFO("Received direction: %s", dir.c_str());
 
-        const double step = 0.03;  // 3cm
+        const double step = 0.03;
 
-        if (is_moving_){
+        if (is_moving_)
             return;
+
+        if (dir == "up" && grid_y_ < GRID_LIMIT)
+        {
+            is_moving_ = true;
+            grid_y_++;
+            moveRelative(step, -step, 0.0);
         }
-        
-        else{
-            if (dir == "up" && grid_y_ <10){
+        else if (dir == "down" && grid_y_ > -GRID_LIMIT)
+        {
+            is_moving_ = true;
+            grid_y_--;
+            moveRelative(-step, step, 0.0);
+        }
+        else if (dir == "left" && grid_x_ < GRID_LIMIT)
+        {
+            is_moving_ = true;
+            grid_x_++;
+            moveRelative(-step, -step, 0.0);
+        }
+        else if (dir == "right" && grid_x_ > -GRID_LIMIT)
+        {
+            is_moving_ = true;
+            grid_x_--;
+            moveRelative(step, step, 0.0);
+        }
+    }
+
+    void watchdogCallback(const ros::TimerEvent&)
+    {
+        double timeout = 5.0;
+
+        if ((ros::Time::now() - last_msg_time_).toSec() > timeout)
+        {
+            if (!returned_to_home_ && !is_moving_)
+            {
+                ROS_WARN("No topic for 5 seconds → Return Home");
+
+                PandaArmController arm("panda_arm");
                 is_moving_ = true;
-                grid_y_++;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(step, -step, 0.0);
-            }
-            else if (dir == "down" && -10 < grid_y_){
-                is_moving_ = true;
-                grid_y_--;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(-step, step, 0.0);
-            }
-            else if (dir == "left" && grid_x_ < 10){
-                is_moving_ = true;
-                grid_x_++;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(-step, -step, 0.0);
-            }
-            else if (dir == "right" && -10 < grid_x_){
-                is_moving_ = true;
-                grid_x_--;
-                ROS_INFO("Grid position: x=%d, y=%d", grid_x_, grid_y_);
-                moveRelative(step, step, 0.0);
-            }
-            else{
-                ROS_WARN("Unknown direction: %s", dir.c_str());
+                arm.moveToJointPositions(start_joints_);
+
+                grid_x_ = 0;
+                grid_y_ = 0;
+
+                returned_to_home_ = true;
+                is_moving_ = false;
             }
         }
     }
 
     /* ================================
-     * EE 기준 상대 이동
+     * EE 상대 이동
      * ================================ */
     void moveRelative(double dx, double dy, double dz)
     {
@@ -125,6 +160,7 @@ private:
         move_group_.setPoseTarget(target_pose);
 
         moveit::planning_interface::MoveGroupInterface::Plan plan;
+
         bool success =
             (move_group_.plan(plan)
              == moveit::core::MoveItErrorCode::SUCCESS);
@@ -134,16 +170,18 @@ private:
             ROS_INFO("Plan successful. Executing...");
             move_group_.execute(plan);
 
-                    is_moving_ = false;
+            move_group_.stop();
         }
         else
         {
             ROS_ERROR("Planning failed!");
         }
+
+        is_moving_ = false;
     }
 
     /* ================================
-     * 현재 EE Pose + 상대 변환
+     * 현재 Pose + 상대 변환
      * ================================ */
     geometry_msgs::Pose getTargetPose(double dx, double dy, double dz)
     {

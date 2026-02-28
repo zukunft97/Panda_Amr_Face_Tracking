@@ -77,6 +77,10 @@ This project implements face tracking for a Panda robot mounted on an AMR using 
 	roslaunch panda_moveit_config demo.launch
 
 	roslaunch moveit_tutorials move_group_interface_tutorial.launch
+  
+## 5. 추가 수정 사항
 
-	roslaunch panda_amr_tutorial eef_relative_move.launch
+  - 사람 얼굴이 5초 이상 감지 되지않을 경우 초기 위치로 초기화 추가
+  
+  - 사람 얼굴이 감지 되지 않을때 얼굴 감지 코드 죽는 상황 예외처리로 수정
 
