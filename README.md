@@ -1,5 +1,5 @@
 # 영상
-https://github.com/zukunft97/Panda_Amr_Face_Tracking/issues/1#issue-4059476466
+![Image](https://github.com/user-attachments/assets/6d754957-aa32-477a-812f-c9f3b0e58c9f)
 
 # 라이센스 관련
 
