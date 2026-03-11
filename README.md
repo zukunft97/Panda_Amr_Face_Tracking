@@ -1,3 +1,6 @@
+# 영상
+https://github.com/zukunft97/Panda_Amr_Face_Tracking/issues/1#issue-4059476466
+
 # 라이센스 관련
 
 ## Description
